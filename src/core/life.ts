@@ -28,6 +28,20 @@ export type LifeCost = {
   copy: string;
 };
 
+export type LifeBatteryInput = {
+  birthDate: string;
+  expectedLifespanYears: number;
+  now?: string;
+};
+
+export type LifeBattery = {
+  secondsLived: number;
+  secondsRemaining: number;
+  totalEstimatedSeconds: number;
+  percentSpent: number;
+  percentRemaining: number;
+};
+
 export type LifeMonthCell = {
   index: number;
   year: number;
@@ -36,6 +50,7 @@ export type LifeMonthCell = {
 };
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const SECONDS_PER_YEAR = 365.25 * 24 * 60 * 60;
 const DAYS_PER_YEAR = 365.25;
 
 function parseDateOnly(value: string): Date {
@@ -52,6 +67,31 @@ function dateOnlyFromDate(value: Date): Date {
 
 function todayDateOnly(today?: string): Date {
   return today ? parseDateOnly(today) : dateOnlyFromDate(new Date());
+}
+
+function nowDateTime(now?: string): Date {
+  return now ? new Date(now) : new Date();
+}
+
+export function estimateLifeBattery(input: LifeBatteryInput): LifeBattery {
+  const birth = parseDateOnly(input.birthDate);
+  const current = nowDateTime(input.now);
+  const totalEstimatedSeconds = Math.round(input.expectedLifespanYears * SECONDS_PER_YEAR);
+  const secondsLived = Math.max(0, Math.floor((current.getTime() - birth.getTime()) / 1000));
+  const secondsRemaining = Math.max(0, totalEstimatedSeconds - secondsLived);
+  const percentSpent = totalEstimatedSeconds === 0 ? 0 : Math.min(100, (secondsLived / totalEstimatedSeconds) * 100);
+
+  return {
+    secondsLived,
+    secondsRemaining,
+    totalEstimatedSeconds,
+    percentSpent,
+    percentRemaining: Math.max(0, 100 - percentSpent),
+  };
+}
+
+export function formatRemainingSeconds(seconds: number): string {
+  return Math.max(0, Math.floor(seconds)).toLocaleString("en-US");
 }
 
 export function estimateLifeLedger(input: LifeLedgerInput): LifeLedger {

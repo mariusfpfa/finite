@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   calculateLifeCost,
   estimateLifeLedger,
+  estimateLifeBattery,
+  formatRemainingSeconds,
   generateLifeMonths,
   type Frequency,
 } from "./life";
@@ -61,5 +63,23 @@ describe("life core calculations", () => {
     expect(months.filter((month) => month.state === "past")).toHaveLength(12);
     expect(months.filter((month) => month.state === "current")).toHaveLength(1);
     expect(months[12]).toMatchObject({ index: 12, state: "current" });
+  });
+
+  it("calculates a discharging life battery from exact seconds", () => {
+    const battery = estimateLifeBattery({
+      birthDate: "2000-01-01",
+      expectedLifespanYears: 80,
+      now: "2040-01-01T00:00:00.000Z",
+    });
+
+    expect(battery.percentSpent).toBeCloseTo(50, 0);
+    expect(battery.percentRemaining).toBeCloseTo(50, 0);
+    expect(battery.secondsRemaining).toBeGreaterThan(1_260_000_000);
+    expect(battery.totalEstimatedSeconds).toBe(Math.round(80 * 365.25 * 24 * 60 * 60));
+  });
+
+  it("formats countdown seconds with grouped whole seconds", () => {
+    expect(formatRemainingSeconds(1261440000)).toBe("1,261,440,000");
+    expect(formatRemainingSeconds(-100)).toBe("0");
   });
 });

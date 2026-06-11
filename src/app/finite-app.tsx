@@ -1,7 +1,14 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { calculateLifeCost, estimateLifeLedger, generateLifeMonths, type Frequency } from "@/core/life";
+import {
+  calculateLifeCost,
+  estimateLifeBattery,
+  estimateLifeLedger,
+  formatRemainingSeconds,
+  generateLifeMonths,
+  type Frequency,
+} from "@/core/life";
 import {
   FINITE_STORAGE_KEY,
   addCostItem,
@@ -24,6 +31,17 @@ const emptyServerSnapshot = () => null;
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function useCurrentTime() {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return now;
 }
 
 let lastStoredValue: string | null = null;
@@ -52,6 +70,7 @@ export default function FiniteApp() {
   const [activeTab, setActiveTab] = useState<Tab>("today");
   const [birthDate, setBirthDate] = useState("");
   const [lifespan, setLifespan] = useState(80);
+  const now = useCurrentTime();
 
   useEffect(() => {
     if (state) saveState(state);
@@ -115,6 +134,11 @@ export default function FiniteApp() {
     birthDate: state.profile.birthDate,
     expectedLifespanYears: state.profile.expectedLifespanYears,
   });
+  const battery = estimateLifeBattery({
+    birthDate: state.profile.birthDate,
+    expectedLifespanYears: state.profile.expectedLifespanYears,
+    now: now.toISOString(),
+  });
 
   return (
     <main className="min-h-screen bg-[#f3eee4] text-stone-950">
@@ -131,6 +155,7 @@ export default function FiniteApp() {
               <p className="text-sm text-stone-400">estimated life spent</p>
             </div>
           </div>
+          <LifeBattery battery={battery} />
         </header>
 
         <nav aria-label="Main sections" className="grid grid-cols-4 gap-2 rounded-3xl bg-white/70 p-2 shadow-sm">
@@ -151,6 +176,39 @@ export default function FiniteApp() {
         {activeTab === "values" && <ValuesPanel state={state} onChange={updateState} />}
       </div>
     </main>
+  );
+}
+
+function LifeBattery({ battery }: { battery: ReturnType<typeof estimateLifeBattery> }) {
+  const remainingPercent = Math.max(0, Math.min(100, battery.percentRemaining));
+
+  return (
+    <section className="mt-8 rounded-[1.75rem] border border-white/10 bg-black/20 p-4 sm:p-5" aria-label="Life battery">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm uppercase tracking-[0.28em] text-amber-300">Life battery</p>
+          <p className="mt-2 text-stone-300">Discharging in real time. Every second is part of the battery.</p>
+        </div>
+        <div className="text-left sm:text-right">
+          <p className="text-sm text-stone-400">Seconds remaining</p>
+          <p data-testid="life-seconds-countdown" className="font-mono text-3xl font-semibold text-amber-200 sm:text-4xl">
+            {formatRemainingSeconds(battery.secondsRemaining)}
+          </p>
+        </div>
+      </div>
+      <div className="mt-5 rounded-2xl border border-white/15 bg-stone-950 p-2">
+        <div className="relative h-10 overflow-hidden rounded-xl bg-stone-800">
+          <div
+            className="absolute inset-y-0 left-0 rounded-xl bg-gradient-to-r from-emerald-400 via-amber-300 to-red-400 transition-[width] duration-700 ease-linear"
+            style={{ width: `${remainingPercent}%` }}
+          />
+          <div className="absolute inset-0 flex items-center justify-center font-mono text-sm font-semibold text-white drop-shadow">
+            {remainingPercent.toFixed(6)}% remaining
+          </div>
+        </div>
+      </div>
+      <p className="mt-3 text-sm text-stone-500">Not a prediction — a visceral clock for perspective.</p>
+    </section>
   );
 }
 

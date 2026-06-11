@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, within, act } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import FiniteApp from "./finite-app";
 
 const fixedToday = new Date("2026-06-11T12:00:00Z");
@@ -10,6 +10,11 @@ describe("Finite web MVP", () => {
     cleanup();
     localStorage.clear();
     vi.setSystemTime(fixedToday);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
   });
 
   it("onboards with date of birth and lifespan, then shows remaining days", async () => {
@@ -22,6 +27,26 @@ describe("Finite web MVP", () => {
 
     expect(await screen.findByText(/estimated days remaining/i)).toBeInTheDocument();
     expect(screen.getByText(/spend them like they matter/i)).toBeInTheDocument();
+    expect(screen.getByText(/life battery/i)).toBeInTheDocument();
+    expect(screen.getByText(/seconds remaining/i)).toBeInTheDocument();
+  });
+
+  it("updates the seconds remaining countdown in real time", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(fixedToday);
+    render(<FiniteApp />);
+    fireEvent.change(screen.getByLabelText(/date of birth/i), { target: { value: "1990-01-01" } });
+    fireEvent.click(screen.getByRole("button", { name: /enter finite/i }));
+
+    const countdown = screen.getByTestId("life-seconds-countdown");
+    const initialSeconds = Number(countdown.textContent?.replace(/,/g, ""));
+
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    const nextSeconds = Number(screen.getByTestId("life-seconds-countdown").textContent?.replace(/,/g, ""));
+    expect(nextSeconds).toBe(initialSeconds - 1);
   });
 
   it("saves a recurring life cost locally and shows the calculated cost", async () => {
