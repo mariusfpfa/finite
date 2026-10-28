@@ -15,7 +15,7 @@ describe("finite state model", () => {
       expectedLifespanYears: 85,
     });
 
-    expect(state.schemaVersion).toBe(1);
+    expect(state.schemaVersion).toBe(2);
     expect(state.profile.birthDate).toBe("1990-01-01");
     expect(state.profile.expectedLifespanYears).toBe(85);
     expect(state.costItems).toEqual([]);

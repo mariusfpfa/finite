@@ -1,4 +1,5 @@
 import type { Frequency } from "./life";
+import type { Ritual, RitualCheckIn } from "./ritual";
 
 export type ReflectionAnswer = "yes" | "mostly" | "not-really";
 export type WorthIt = "yes" | "no" | "sometimes" | "unsure";
@@ -25,17 +26,19 @@ export type CostItem = {
 };
 
 export type FiniteState = {
-  schemaVersion: 1;
+  schemaVersion: 2;
   profile: Profile;
   costItems: CostItem[];
   reflections: DailyReflection[];
+  rituals: Ritual[];
+  ritualCheckIns: RitualCheckIn[];
 };
 
 export const FINITE_STORAGE_KEY = "finite.state.v1";
 
 export function createInitialFiniteState(profile: Pick<Profile, "birthDate" | "expectedLifespanYears">): FiniteState {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     profile: {
       birthDate: profile.birthDate,
       expectedLifespanYears: profile.expectedLifespanYears,
@@ -43,6 +46,8 @@ export function createInitialFiniteState(profile: Pick<Profile, "birthDate" | "e
     },
     costItems: [],
     reflections: [],
+    rituals: [],
+    ritualCheckIns: [],
   };
 }
 
@@ -51,11 +56,13 @@ export function serializeFiniteState(state: FiniteState): string {
 }
 
 export function deserializeFiniteState(value: string): FiniteState {
-  const parsed = JSON.parse(value) as FiniteState;
-  if (parsed.schemaVersion !== 1) {
+  const parsed = JSON.parse(value);
+  if (!parsed || ![1, 2].includes(parsed.schemaVersion)) {
     throw new Error("Unsupported Finite state schema version");
   }
-  return parsed;
+  if (parsed.schemaVersion === 1) return { ...parsed, schemaVersion: 2, rituals: [], ritualCheckIns: [] };
+  if (!Array.isArray(parsed.rituals) || !Array.isArray(parsed.ritualCheckIns)) throw new Error("Invalid ritual data");
+  return parsed as FiniteState;
 }
 
 export function addCostItem(state: FiniteState, item: Omit<CostItem, "id">): FiniteState {

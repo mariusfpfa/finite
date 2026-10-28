@@ -22,6 +22,9 @@ import {
   type WorthIt,
 } from "@/core/state";
 
+import RitualPanel from "./ritual-panel";
+import { localDateKey } from "@/core/ritual";
+
 type Tab = "today" | "life" | "costs" | "values";
 
 const VALUE_OPTIONS = ["Family", "Health", "Love", "Creating", "Learning", "Freedom", "Friendship", "Rest", "Adventure", "Peace"];
@@ -30,7 +33,7 @@ const subscribeToLocalState = () => () => {};
 const emptyServerSnapshot = () => null;
 
 function todayKey() {
-  return new Date().toISOString().slice(0, 10);
+  return localDateKey();
 }
 
 function useCurrentTime() {
@@ -170,7 +173,10 @@ export default function FiniteApp() {
           ))}
         </nav>
 
-        {activeTab === "today" && <TodayPanel state={state} onChange={updateState} />}
+        {activeTab === "today" && <>
+          <RitualPanel state={state} onChange={updateState} today={localDateKey(now)} valueOptions={VALUE_OPTIONS} />
+          <TodayPanel state={state} onChange={updateState} />
+        </>}
         {activeTab === "life" && <LifePanel state={state} ledger={ledger} />}
         {activeTab === "costs" && <CostsPanel state={state} onChange={updateState} />}
         {activeTab === "values" && <ValuesPanel state={state} onChange={updateState} />}
